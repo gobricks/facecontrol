@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/gobricks/facecontrol.svg?branch=master)](https://travis-ci.org/gobricks/facecontrol)
+
 # Facecontrol
 
 Simple yet powerful authentication, single sign-on and (optinal) authorization solution.
