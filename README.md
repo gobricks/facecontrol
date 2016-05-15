@@ -1,4 +1,6 @@
 [![Build Status](https://travis-ci.org/gobricks/facecontrol.svg?branch=master)](https://travis-ci.org/gobricks/facecontrol)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gobricks/facecontrol)](https://goreportcard.com/report/github.com/gobricks/facecontrol)
+
 
 # Facecontrol
 

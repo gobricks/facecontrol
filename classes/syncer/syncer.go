@@ -9,7 +9,7 @@ import (
 
 // SyncCredentials syncs users credentials
 func SyncCredentials(с *credentials.Credentials, generator credentials.Generator) {
-	for range time.Tick(config.SyncIntervalSeconds * time.Second) {
+	for range time.Tick(config.SyncInterval * time.Second) {
 		credentials := generator()
 		*с = credentials
 	}
