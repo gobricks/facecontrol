@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.6
+  - tip
+  
+install:
+  - go get github.com/gin-gonic/gic
+  - go get github.com/unrolled/secure
+  - go get github.com/dgrijalva/jwt-go
