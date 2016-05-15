@@ -41,6 +41,6 @@ var (
 
 // misc
 var (
-	syncSeconds, _      = strconv.Atoi(get(os.Getenv("FC_SYNC_INTERVAL"), "2"))
-	SyncIntervalSeconds = time.Duration(syncSeconds)
+	syncSeconds, _ = strconv.Atoi(get(os.Getenv("FC_SYNC_INTERVAL"), "2"))
+	SyncInterval   = time.Duration(syncSeconds)
 )
