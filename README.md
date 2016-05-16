@@ -61,6 +61,7 @@ Facecontrol can use certain environment variables to customize its behavour.
 **Additional**
 
 * **FC_MODE** _string_ - facecontrol run mode. Available options: `debug`, `release`. Default: `debug`
+* **FC_HOST** _string_ - facecontrol run host. Default: `0.0.0.0`
 * **FC_PORT** _int_ - facecontrol HTTP run port. Default: `8080`
 * **FC_SSL** _string_ - enable facecontrol in HTTPS mode. Available options: `enable`, `disable`. Default: `disable`
 * **FC_SSL_PORT** _int_ - facecontrol HTTPS run port. Default: `4430`

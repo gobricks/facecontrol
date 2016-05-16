@@ -10,10 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// переменные для запуска
+// startup vars
 var (
 	RunMode    = get(os.Getenv("FC_MODE"), "debug")
-	RunAddr    = bget(RunMode == gin.ReleaseMode, "0.0.0.0", "")
+	RunAddr    = get(os.Getenv("FC_HOST"), "0.0.0.0")
 	RunPort    = ":" + get(os.Getenv("FC_PORT"), "8080")
 	RunPortSSL = ":" + get(os.Getenv("FC_SSL_PORT"), "4430")
 
@@ -24,7 +24,7 @@ var (
 	JWTSecret = os.Getenv("FC_JWT_SECRET")
 )
 
-// безопасность
+// security vars
 var (
 	SecurityAllowedHosts    = strings.Split(os.Getenv("FC_SECURITY_ALLOWED_HOSTS"), ",")
 	SecuritySSLRedirect     = os.Getenv("FC_SECURITY_SSL_REDIRECT") == "enable"
@@ -39,7 +39,7 @@ var (
 	JWTSigningMethod = jwt.SigningMethodHS512
 )
 
-// misc
+// misc vars
 var (
 	syncSeconds, _ = strconv.Atoi(get(os.Getenv("FC_SYNC_INTERVAL"), "2"))
 	SyncInterval   = time.Duration(syncSeconds)
