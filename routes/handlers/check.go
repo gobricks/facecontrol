@@ -24,7 +24,7 @@ func Check(c *gin.Context) {
 	})
 
 	if err != nil {
-		c.JSON(400, response.BaseResponse{
+		c.JSON(http.StatusBadRequest, response.BaseResponse{
 			Success: false,
 			Error:   err.Error(),
 		})
@@ -32,7 +32,7 @@ func Check(c *gin.Context) {
 	}
 	
 	if token.Valid == false {
-		c.JSON(403, response.BaseResponse{
+		c.JSON(http.StatusForbidden, response.BaseResponse{
 			Success: false,
 			Error:   http.StatusText(http.StatusForbidden),
 		})
@@ -44,14 +44,14 @@ func Check(c *gin.Context) {
 
 	user, err := credentials.Get(uid)
 	if err != nil {
-		c.JSON(404, response.BaseResponse{
+		c.JSON(http.StatusNotFound, response.BaseResponse{
 			Success: false,
 			Error:   err.Error(),
 		})
 		return
 	}
 
-	c.JSON(200, response.UserResponse{
+	c.JSON(http.StatusOK, response.UserResponse{
 		BaseResponse: response.BaseResponse{
 			Success: true,
 		},
