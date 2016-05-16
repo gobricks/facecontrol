@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -22,10 +23,18 @@ func Check(c *gin.Context) {
 		return []byte(config.JWTSecret), nil
 	})
 
-	if err != nil || token.Valid == false {
+	if err != nil {
 		c.JSON(400, response.BaseResponse{
 			Success: false,
 			Error:   err.Error(),
+		})
+		return
+	}
+	
+	if token.Valid == false {
+		c.JSON(403, response.BaseResponse{
+			Success: false,
+			Error:   http.StatusText(http.StatusForbidden),
 		})
 		return
 	}
@@ -35,7 +44,7 @@ func Check(c *gin.Context) {
 
 	user, err := credentials.Get(uid)
 	if err != nil {
-		c.JSON(400, response.BaseResponse{
+		c.JSON(404, response.BaseResponse{
 			Success: false,
 			Error:   err.Error(),
 		})
