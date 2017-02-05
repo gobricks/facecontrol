@@ -4,107 +4,101 @@
 
 # Facecontrol
 
-Simple yet powerful authentication, single sign-on and (optinal) authorization solution.
+Simple authentication, single sign-on and (optional) authorization solution.
 
 # Basic example
-
-Create file `main.go` and paste the following code into it:
 
 ``` go
 package main
 
 import (
+    "time"
+
     "github.com/gobricks/facecontrol"
-    "github.com/gobricks/facecontrol/classes/credentials"
 )
 
+type MyUser struct {
+    Login string    `json:"login"`
+    FullName string `json:"fullname"`
+    IsAdmin bool    `json:"is_admin"`
+    CaEdit []string `json:"can_edit"`
+}
+
 func main() {
-    facecontrol.Run(getUsersData)
+    fc, _ := facecontrol.New(facecontrol.Config{
+        RunAt: ":8080",
+        JwtSecret: "OpenSesame",
+        JwtTTL: 24 * time.Hour,
+        Validator: findUser,
+    })
+    
+    fc.Run()
 }
 
-func getUsersData() credentials.Credentials {
-    dataStorage := credentials.Credentials{}
-    // key of map must be unique ID which will be used alongside
-    // with password to identify user (e.g. username)
-    dataStorage["gobricks"] = credentials.User{
-        Password: "a963a333881c43fbca256730ff7d59235a3bd4ea",
-        Payload: map[string]interface{}{
-            "username": "gobricks",
-            "fullname": "John Doe",
-            "age": 24,
-            "email": "jdoe@gobricks.io",
-        },
+func findUser(data map[string]string) facecontrol.Payload {
+    if data != nil && data["login"] == "admin" && data["password"] == "JUaPXr6C" {
+        return MyUser{
+            Login: "admin",
+            FullName: "Johnny Mnemonic",
+            IsAdmin: true,
+            CanEdit: []string{"posts", "comments"},
+        }
     }
-    
-    // in real life you need to replace code above with
-    // actual users data generator (e.g. mysql query or something like this)
-    
-    return dataStorage
+    return nil
 }
 ```
 
-# Build and run
+# Configuration
 
+Use `facecontrol.Config` struct to customize Facecontrol behavior. Available fields are:
+
+``` go
+RunAt     string // defines address of running facecontrol instance. Example: "127.0.0.1:6000". Required
+EnableSSL bool   // forces facecontrol to run in HTTPS mode
+SSLCert   string // path to corresponding SSL file. Required if EnableSSL is true
+SSLKey    string // path to corresponding SSL file. Required if EnableSSL is true
+JwtSecret string // will be used to sign auth tokens. Required
+JwtTTL    time.Duration // token expiration time
+Validator CredentialsValidator // user define credentials validation function
 ```
-$ go build main.go
-$ FC_JWT_SECRET="replace_me_with_something_stronk" ./main
-```
 
-# Start up variables
+# Validator function
 
-Facecontrol can use certain environment variables to customize its behavour.
-
-**Required**
-
-* **FC_JWT_SECRET** _string_ - secret passphrase for token signing.
-
-**Additional**
-
-* **FC_MODE** _string_ - facecontrol run mode. Available options: `debug`, `release`. Default: `debug`
-* **FC_HOST** _string_ - facecontrol run host. Default: `0.0.0.0`
-* **FC_PORT** _int_ - facecontrol HTTP run port. Default: `8080`
-* **FC_SSL** _string_ - enable facecontrol in HTTPS mode. Available options: `enable`, `disable`. Default: `disable`
-* **FC_SSL_PORT** _int_ - facecontrol HTTPS run port. Default: `4430`
-* **FC_SSL_CERT** _string_ - path to SSL cert file. Default: `""`
-* **FC_SSL_KEY** _string_ - path to SSL key file. Default: `""`
-* **FC_SYNC_INTERVAL** _int_ - interval between users credentials syncronization in seconds. Default: `2`
-* **FC_JWT_EXPIRE** _int_ - JWT token expiration time in seconds. Default: `2592000`
-* **FC_SECURITY_ALLOWED_HOSTS** _string_ - comma separated list of allowed domains. Default: `""`
-* **FC_SECURITY_SSL_REDIRECT** _string_ - force SSL redirect. Available options: `enable`, `disable`. Default: `disable`
+A function with signature of `func(map[string]string) facecontrol.Payload` can be passed to `facecontrol.Config`.
+If so form data from every incoming request for token issuing will be passed to this function.
+You can use this function to find user in your database or any other credential storage.
+If given function return `nil` user will be declined from acquiring token.
+You can pass `nil` instead of function to skip custom data validation and allow anyone to acquire token.
 
 # Token issuing and validation
 
 After calling ```facecontrol.Run()``` a web server will startup, allowing you to call two URLs:
-* ```GET /token/``` - for token issuing
-* ```GET /token/<token>/``` - for checking previously issued token
+* ```GET /issue``` - for token issuing
+* ```GET /validate``` - for validating previously issued token
 
 **Token validation example**:
 
-```GET /token/?uid=gobricks&password=a963a333881c43fbca256730ff7d59235a3bd4ea```
+```curl -X POST -F "login=admin" -F "password=d41d8cd98f00b204e9800998ecf8427e" "http://127.0.0.1:6000/issue"```
 
 Returns:
 
-``` json
-{
-  "success": true,
-  "token": "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0NjU5MTI3NjksInVpZCI6ImdvYnJpY2tzIn0.ITqJ1uMdNZXb9XfqbNVF-qy7hVTnPr5ZUk3SHf77y6MDb6_nBCxXN01Fo5M3jxP9o5DnCYV3Ic4OnIybb9qs1A"
-}
+```
+eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0NjU5MTI3NjksInVpZCI6ImdvYnJpY2tzIn0.ITqJ1uMdNZXb9XfqbNVF-qy7hVTnPr5ZUk3SHf77y6MDb6_nBCxXN01Fo5M3jxP9o5DnCYV3Ic4OnIybb9qs1
 ```
 
 **Token validation example**:
 
-```GET /token/eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE0NjU5MTI3NjksInVpZCI6ImdvYnJpY2tzIn0.ITqJ1uMdNZXb9XfqbNVF-qy7hVTnPr5ZUk3SHf77y6MDb6_nBCxXN01Fo5M3jxP9o5DnCYV3Ic4OnIybb9qs1A```
+```curl -X GET -H "Authorization: Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE0ODYzMjAwODYsImlzcyI6ImZhY2Vjb250cm9sIn0.dZB-v4fx2x155YarTze17sQsq1HRpz0rYdIxF3hUG469-0l3N1RzE9ES1MFz8kPSWLaKUvXBAqXXDEEmNEb-DA" "http://127.0.0.1:6000/validate"```
 
 Returns:
 
 ``` json
 {
-  "success": true,
-  "user": {
-    "age": 24,
-    "email": "jdoe@gobricks.io",
-    "fullname": "John Doe",
-    "username": "gobricks"
+  "iat": 1486320086,
+  "iss": "facecontrol",
+  "data": {
+      "login": "admin",
+      "is_admin": true
   }
 }
 ```
@@ -118,25 +112,9 @@ Just make session cookie available to any service hosted on your domain (e.g. *.
 
 # How to achieve authorization
 
-You can pass map with user priveleges alongside with primary authentication data in your ```main.go``` implementation. All your services will get this priveleges back after user authentication.
-
-Example:
-
-``` go
-dataStorage["gobricks"] = credentials.User{
-    Password: "a963a333881c43fbca256730ff7d59235a3bd4ea",
-    Payload: map[string]interface{}{
-        "username": "gobricks",
-        "fullname": "John Doe",
-        "age": 24,
-        "email": "jdoe@gobricks.io",
-        "priveleges": map[string]bool{
-            "mail.read": true,
-            "mail.delete": false,
-        },
-    },
-}
-```
+You can pass user priveleges into token payload using `Validator` function.
+All your services will get this priveleges back after user authentication.
+See basic example.
 
 Upon receiving user data from facecontrol your service can check if user can perform certain action based on available priveleges. 
 
