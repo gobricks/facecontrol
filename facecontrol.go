@@ -76,14 +76,8 @@ func (f Facecontrol) issueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("Cannot parse form inputs: %s", err)))
-		return
-	}
-
 	credentials, err := f.conf.Validator(r)
-	if credentials == nil {
+	if err != nil {
 		w.WriteHeader(http.StatusForbidden)
 		w.Write([]byte(err.Error()))
 		return
