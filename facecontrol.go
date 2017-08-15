@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -19,11 +18,11 @@ type Claims struct {
 // Payload is a custom data to be append to issued token.
 type Payload interface{}
 
-// CredentialsValidator is an interface that defines communication
-// logic with custom credentials storage. It accepts map of credentials
+// CredentialsValidator is an function that defines incoming credentials
+// validation and payload construction logic. It accepts raw HTTP Request
 // and returns payload data if credentials are valid.
-// If given credentials are invalid it must return nil.
-type CredentialsValidator func(map[string]string) Payload
+// If given credentials are invalid it must return non-nil error.
+type CredentialsValidator func(*http.Request) (Payload, error)
 
 // Facecontrol is an SSO service.
 type Facecontrol struct {
@@ -54,6 +53,10 @@ func New(conf Config) (*Facecontrol, error) {
 		return nil, fmt.Errorf("JwtSecret cannot be empty")
 	}
 
+	if conf.Validator == nil {
+		return nil, fmt.Errorf("Cannot start without validator function")
+	}
+
 	return &Facecontrol{
 		conf: conf,
 	}, nil
@@ -73,29 +76,17 @@ func (f Facecontrol) issueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := r.ParseForm()
-	if err != nil {
+	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("Cannot parse form inputs: %s", err)))
 		return
 	}
 
-	var inputs map[string]string
-	if len(r.PostForm) > 0 {
-		inputs = make(map[string]string)
-		for k, v := range r.PostForm {
-			inputs[k] = v[0]
-		}
-	}
-
-	var credentials Payload
-	if f.conf.Validator != nil {
-		credentials = f.conf.Validator(inputs)
-		if credentials == nil {
-			w.WriteHeader(http.StatusForbidden)
-			w.Write([]byte("Invalid credentials given"))
-			return
-		}
+	credentials, err := f.conf.Validator(r)
+	if credentials == nil {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(err.Error()))
+		return
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, Claims{
@@ -125,14 +116,17 @@ func (f Facecontrol) validateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authHeader := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-	if len(authHeader) != 2 || authHeader[0] != "Bearer" {
+	rawAuthHeader := r.Header.Get("Authorization")
+
+	if len(rawAuthHeader) < 8 && rawAuthHeader[:7] != "Bearer " {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`Malformed "Authorization" header`))
 		return
 	}
 
-	token, err := jwt.Parse(authHeader[1], func(token *jwt.Token) (interface{}, error) {
+	tokenString := rawAuthHeader[7:len(rawAuthHeader)]
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// validate the alg
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
@@ -146,7 +140,7 @@ func (f Facecontrol) validateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if token.Valid == false {
+	if !token.Valid {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(`Cannot validate given token`))
 		return

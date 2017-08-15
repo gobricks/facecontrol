@@ -13,6 +13,8 @@ package main
 
 import (
     "time"
+    "errors"
+    "net/http"
 
     "github.com/gobricks/facecontrol"
 )
@@ -21,7 +23,7 @@ type MyUser struct {
     Login string    `json:"login"`
     FullName string `json:"fullname"`
     IsAdmin bool    `json:"is_admin"`
-    CaEdit []string `json:"can_edit"`
+    CanEdit []string `json:"can_edit"`
 }
 
 func main() {
@@ -35,16 +37,20 @@ func main() {
     fc.Run()
 }
 
-func findUser(data map[string]string) facecontrol.Payload {
-    if data != nil && data["login"] == "admin" && data["password"] == "JUaPXr6C" {
-        return MyUser{
-            Login: "admin",
-            FullName: "Johnny Mnemonic",
-            IsAdmin: true,
-            CanEdit: []string{"posts", "comments"},
-        }
+func findUser(r *http.Request) (facecontrol.Payload, error) {
+    login := r.URL.Query().Get("login")
+    password := r.URL.Query().Get("password")
+
+    if login != "admin" && password != "12345" {
+        return nil, errors.New("Invalid credentials")
     }
-    return nil
+
+    return MyUser{
+        Login: "admin",
+        FullName: "Johnny Mnemonic",
+        IsAdmin: true,
+        CanEdit: []string{"posts", "comments"},
+    }, nil
 }
 ```
 
@@ -64,11 +70,10 @@ Validator CredentialsValidator // user define credentials validation function
 
 # Validator function
 
-A function with signature of `func(map[string]string) facecontrol.Payload` can be passed to `facecontrol.Config`.
-If so form data from every incoming request for token issuing will be passed to this function.
+A function with signature of `func(*http.Request) (facecontrol.Payload, error)` can be passed to `facecontrol.Config`.
+If so every incoming HTTP request for token issuing will be passed to this function.
 You can use this function to find user in your database or any other credential storage.
-If given function return `nil` user will be declined from acquiring token.
-You can pass `nil` instead of function to skip custom data validation and allow anyone to acquire token.
+If given function return non-nil error user will be declined from acquiring token.
 
 # Token issuing and validation
 

@@ -3,10 +3,10 @@ language: go
 go:
   - 1.6
   - 1.7
-  - tip
+  - 1.8
   
 install:
   - go get github.com/dgrijalva/jwt-go
   
 script:
- - go build facecontrol.go
+  - go build facecontrol.go
